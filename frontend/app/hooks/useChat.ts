@@ -19,7 +19,6 @@ export function useChat() {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8015';
       const response = await fetch(`${API_URL}/chat`, {
-      // const response = await fetch('http://localhost:8015/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
@@ -27,7 +26,7 @@ export function useChat() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-     //处理流式传输：以消费流式响应而不是等待完整文本。
+      // 处理流式传输：以消费流式响应而不是等待完整文本。
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No response body');
@@ -35,16 +34,16 @@ export function useChat() {
       
       while (true) {
         const { done, value } = await reader.read();
-        if(done) break;
+        if (done) break;
         if (value) {
-          const chunk = new TextDecoder().decode(value); 
+          const chunk = new TextDecoder().decode(value);
           setMessages(prev => {
             const newMessages = [...prev];
             const lastIndex = newMessages.length - 1;
             if (lastIndex >= 0) {
-              newMessages[lastIndex] = { 
-                ...newMessages[lastIndex], 
-                content: newMessages[lastIndex].content + chunk 
+              newMessages[lastIndex] = {
+                ...newMessages[lastIndex],
+                content: newMessages[lastIndex].content + chunk
               };
             }
             return newMessages;
@@ -53,10 +52,10 @@ export function useChat() {
       }
 
     } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Sorry, something went wrong. Please try again later." 
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, something went wrong. Please try again later.'
       }]);
     } finally {
       setLoading(false);
