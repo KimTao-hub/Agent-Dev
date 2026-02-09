@@ -1,4 +1,5 @@
 'use client';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AgentItem {
@@ -11,6 +12,9 @@ interface AgentItem {
 
 export default function AgentHall() {
   const router = useRouter();
+  
+  // 防抖定时器
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Agent数据，包含小红书agent作为第一个元素
   const agents: AgentItem[] = [
@@ -77,6 +81,13 @@ export default function AgentHall() {
     }
   ];
 
+  // 搜索相关状态
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<AgentItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchCache, setSearchCache] = useState<Record<string, AgentItem[]>>({});
+  const [displayedAgents, setDisplayedAgents] = useState<AgentItem[]>(agents);
+
   const handleAgentClick = (agent: AgentItem) => {
     if (agent.route) {
       // 直接导航，依赖布局文件的动画效果
@@ -86,6 +97,80 @@ export default function AgentHall() {
       alert(`${agent.name} 正在开发中，敬请期待！`);
     }
   };
+
+  // 搜索处理函数
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    
+    // 清除之前的防抖定时器
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      setDisplayedAgents(agents);
+      return;
+    }
+    
+    // 检查缓存
+    if (searchCache[query]) {
+      setSearchResults(searchCache[query]);
+      setDisplayedAgents(searchCache[query]);
+      return;
+    }
+    
+    // 设置防抖定时器
+    debounceTimerRef.current = setTimeout(() => {
+      setIsSearching(true);
+      
+      // 模拟搜索延迟
+      setTimeout(() => {
+        // 执行搜索逻辑
+        const results = agents.filter(agent => {
+          const searchTerm = query.toLowerCase();
+          return (
+            agent.name.toLowerCase().includes(searchTerm) ||
+            agent.description.toLowerCase().includes(searchTerm) ||
+            agent.id.toLowerCase().includes(searchTerm)
+          );
+        }).slice(0, 10); // 最多显示10条结果
+        
+        // 更新缓存
+        setSearchCache(prev => ({
+          ...prev,
+          [query]: results
+        }));
+        
+        setSearchResults(results);
+        setDisplayedAgents(results);
+        setIsSearching(false);
+      }, 200); // 模拟搜索响应时间
+    }, 300); // 防抖时间300ms
+  }, [agents, searchCache]);
+
+  // 处理搜索提交
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // 搜索提交时，搜索结果已经通过handleSearch更新到displayedAgents
+  }, []);
+
+  // 重置搜索结果
+  useEffect(() => {
+    // 键盘事件处理：按ESC键清除搜索
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSearchQuery('');
+        setDisplayedAgents(agents);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <main className="container" style={{ alignItems: 'center' }}>
@@ -113,6 +198,116 @@ export default function AgentHall() {
         </p>
       </header>
 
+      {/* 搜索组件 */}
+      <div style={{
+        width: '100%',
+        maxWidth: '800px',
+        marginBottom: '3rem',
+        position: 'relative'
+      }}>
+        <div style={{
+          display: 'flex',
+          width: '100%',
+          position: 'relative'
+        }}>
+          <input
+            type="text"
+            placeholder="搜索智能体..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '1rem 4rem 1rem 1.5rem',
+              fontSize: '1rem',
+              border: '1px solid #334155',
+              borderRadius: '0.5rem 0 0 0.5rem',
+              backgroundColor: 'var(--secondary)',
+              color: 'var(--foreground)',
+              outline: 'none',
+              transition: 'all 0.2s ease'
+            }}
+          />
+          
+          {/* 删除按钮 */}
+          {searchQuery.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setDisplayedAgents(agents);
+              }}
+              style={{
+                position: 'absolute',
+                right: '8rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                backgroundColor: 'transparent',
+                color: '#94a3b8',
+                border: 'none',
+                borderRadius: '50%',
+                width: '2rem',
+                height: '2rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.2rem',
+                transition: 'all 0.2s ease',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#60a5fa';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#94a3b8';
+              }}
+            >
+              ×
+            </button>
+          )}
+          
+          <button
+            type="submit"
+            onClick={handleSearchSubmit}
+            style={{
+              padding: '1rem 2rem',
+              fontSize: '1rem',
+              backgroundColor: '#60a5fa',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0 0.5rem 0.5rem 0',
+              cursor: 'pointer',
+              transition: 'background 0.2s ease',
+              minWidth: '8rem'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#3b82f6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#60a5fa';
+            }}
+          >
+            {isSearching ? '搜索中...' : '搜索'}
+          </button>
+        </div>
+        
+        {/* 搜索结果提示 */}
+        {searchQuery.trim() && (
+          <div style={{
+            marginTop: '0.75rem',
+            textAlign: 'center',
+            fontSize: '0.875rem',
+            color: '#94a3b8'
+          }}>
+            {isSearching 
+              ? '正在搜索智能体...' 
+              : searchResults.length > 0 
+                ? `找到 ${searchResults.length} 个相关智能体` 
+                : '未找到相关智能体'}
+          </div>
+        )}
+      </div>
+
       {/* Agent矩阵布局 */}
       <div style={{
         display: 'grid',
@@ -123,7 +318,7 @@ export default function AgentHall() {
         width: '100%',
         marginBottom: '3rem'
       }}>
-        {agents.map((agent) => (
+        {displayedAgents.map((agent) => (
           <div
             key={agent.id}
             onClick={() => handleAgentClick(agent)}
