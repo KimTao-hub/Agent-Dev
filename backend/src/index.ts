@@ -9,7 +9,7 @@ import { xiaohongshuService } from './xiaohongshuService';
 import logger from './logger';
 
 const app = express();
-const PORT = process.env.PORT || 8015;
+const PORT = 8015;
 
 
 // 确保logs目录存在

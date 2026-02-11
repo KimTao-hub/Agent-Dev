@@ -12,7 +12,6 @@
 - **.env文件**:
   ```
   DEEPSEEK_API_KEY=your_api_key_here
-  PORT=8015
   ```
 ### 1.2 开发环境启动
 ```bash
